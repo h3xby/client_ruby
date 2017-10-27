@@ -14,6 +14,7 @@ module BeGateway
       @login = params.fetch(:shop_id)
       @password = params.fetch(:secret_key)
       @url = params.fetch(:url)
+      @logger = params.fetch(:logger)
       @opts = params[:options] || {}
     end
 
@@ -60,7 +61,7 @@ module BeGateway
     end
 
     def logger
-      (opts[:logger] || Logger.new(STDOUT)).tap { |l| l.level = Logger::INFO }
+      @logger ||= Logger.new(STDOUT).tap { |l| l.level = Logger::INFO }
     end
   end
 end
