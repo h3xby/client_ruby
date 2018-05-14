@@ -1,5 +1,7 @@
 module BeGateway
   module Connection
+    MAX_RETRY_COUNT = 3
+
     extend ActiveSupport::Concern
     extend Forwardable
     def_delegators :connection, :headers, :headers=
@@ -14,7 +16,7 @@ module BeGateway
       @login = params.fetch(:shop_id)
       @password = params.fetch(:secret_key)
       @url = params.fetch(:url)
-      @logger = params.fetch(:logger)
+      @logger = params[:logger]
       @opts = params[:options] || {}
     end
 
@@ -23,9 +25,17 @@ module BeGateway
     attr_reader :login, :password, :url
 
     def send_request(method, path, params = nil)
+      retry_count = MAX_RETRY_COUNT
+      uuid = SecureRandom.uuid
+
       r = begin
-            connection.public_send(method, path, params)
+            connection.public_send(method, path, params) do |req|
+              req.headers["RequestID"] = uuid
+            end
           rescue Faraday::Error::ClientError
+            retry_count -= 1
+            retry if retry_count > 0
+
             OpenStruct.new(
               status: 500,
               body: {
